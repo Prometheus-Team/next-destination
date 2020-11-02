@@ -1,3 +1,5 @@
+from util import Directions
+
 # Finding Step Priority
 # todo: change class name
 class NextDestination:
@@ -79,12 +81,13 @@ class NextDestination:
                 horizontalPriority[1],
                 verticalPriority[1],
             ]
-        return stepPriority
+
+        directionPriority = Directions(stepPriority).getDirections()
+        return directionPriority
 
 
 robotPositionState = NextDestination(
-    bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30},
-    currentPosition={"x": 5, "y": 5},
+    bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30}
 )
 
 print("LOOKIE")
