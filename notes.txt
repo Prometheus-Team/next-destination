@@ -1,0 +1,56 @@
+            rowRotated = (centerRow - rowNow) * math.sin(BEARING) + rowNow * math.cos(
+                BEARING
+            )
+            columnRotated = (centerColumn - columnNow) * math.cos(
+                BEARING
+            ) - rowNow * math.sin(BEARING)
+
+case:
+1. 0 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+        centerColumn : centerColumn + VISION_RANGE,
+    ]
+    
+2. 90 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + 1,
+        centerColumn - VISION_RANGE : centerColumn + VISION_RANGE + 1,
+    ]
+    
+3. 180 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+        centerColumn - VISION_RANGE : centerColumn + 1,
+    ]
+    
+4. 270 degrees
+    area[
+        centerRow : centerRow + VISION_RANGE + 1,
+        centerColumn - VISION_RANGE : centerColumn + VISION_RANGE + 1,
+    ]
+
+case:
+1. 0 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+        centerRow : centerRow + VISION_RANGE,
+    ]
+    
+2. 90 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + 1,
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+    ]
+    
+3. 180 degrees
+    area[
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+        centerRow - VISION_RANGE : centerRow + 1,
+    ]
+    
+4. 270 degrees
+    area[
+        centerRow : centerRow + VISION_RANGE + 1,
+        centerRow - VISION_RANGE : centerRow + VISION_RANGE + 1,
+    ]
