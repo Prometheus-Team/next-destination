@@ -1,27 +1,30 @@
 import numpy as np
-from util import Directions
+from util import Directions, Point
+from nextDestination import NextDestination
 
 
 class DFS:
     OPEN = 0
     WALL = 1
     VISITED = 2
+    SOUTH = "SOUTH"
+    NORTH = "NORTH"
+    WEST = "WEST"
+    EAST = "EAST"
     visitedStack = []
     branchingStack = []
     # todo: the visited stack needs to be updated when the robot moves across a line
     # todo: add branching stack
 
-    map = [[]]
-
     def __init__(self, board, stepPriority):
         self.board = board
+        self.visitedMap = np.zeros(board.shape)
         # 2D num-py array
         # [[,]]
         # value of a cell --> OPEN, WALL, VISITED, UNVISITED, ROBOT POSITION
 
         self.stepPriority = stepPriority
         # ["EAST", "NORTH", "SOUTH", "WEST"]
-
 
     def getOpenDirections(self, currentPosition):
         currentRow = currentPosition[0]
@@ -30,34 +33,48 @@ class DFS:
         openDirections = []
         sortedOpenDirections = []
 
-
         # todo: the +/- 1 values should actually be the vision range of the robot.
         # todo: OR we should decide on the size of a "TILE"
 
         try:
-            if (currentRow + 1 >= 0 and self.map[currentRow + 1, currentColumn] == OPEN):
-                openDirections.append(Directions.SOUTH)
+            if (
+                currentRow + 1 >= 0
+                and self.board[currentRow + 1, currentColumn] == self.OPEN
+                and self.visitedMap[currentRow + 1, currentColumn] != self.VISITED
+            ):
+                openDirections.append(self.SOUTH)
         except IndexError as err:
             pass
-            
+
         try:
-            if(currentRow - 1 >= 0 and self.map[currentRow - 1, currentColumn] == OPEN):
-                openDirections.append(Directions.NORTH)
+            if (
+                currentRow - 1 >= 0
+                and self.board[currentRow - 1, currentColumn] == self.OPEN
+                and self.visitedMap[currentRow - 1, currentColumn] != self.VISITED
+            ):
+                openDirections.append(self.NORTH)
         except IndexError as err:
             pass
 
         try:
-            if(currentColumn + 1 >= 0 and self.map[currentRow, currentColumn + 1] == OPEN):
-                openDirections.append(Directions.EAST)
-        except IndexError as err:
-            pass
-        
-        try:
-            if(currentColumn - 1 >= 0 and self.map[currentRow, currentColumn - 1] == OPEN):
-                openDirections.append(Directions.WEST)
+            if (
+                currentColumn + 1 >= 0
+                and self.board[currentRow, currentColumn + 1] == self.OPEN
+                and self.visitedMap[currentRow, currentColumn + 1] != self.VISITED
+            ):
+                openDirections.append(self.EAST)
         except IndexError as err:
             pass
 
+        try:
+            if (
+                currentColumn - 1 >= 0
+                and self.board[currentRow, currentColumn - 1] == self.OPEN
+                and self.visitedMap[currentRow, currentColumn - 1] != self.VISITED
+            ):
+                openDirections.append(self.WEST)
+        except IndexError as err:
+            pass
 
         for i in openDirections:
             sortedOpenDirections.append(self.stepPriority[0][i])
@@ -65,244 +82,68 @@ class DFS:
         sortedOpenDirections.sort()
 
         for i in range(len(sortedOpenDirections)):
-            sortedOpenDirections[i] = stepPriority[1][sortedOpenDirections[i]]
+            sortedOpenDirections[i] = self.stepPriority[1][sortedOpenDirections[i]]
 
-        if (sortedOpenDirections.__len__ > 1):
-            self.branchingStack.append((currentRow, currentColumn, sortedOpenDirections))
-            
+        if len(sortedOpenDirections) > 1:
+            self.branchingStack.append(
+                (currentRow, currentColumn, sortedOpenDirections)
+            )
+
         return sortedOpenDirections
-
 
     # todo
     def getNextStep(self, currentPosition):
 
+        self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
         openDirections = self.getOpenDirections(currentPosition)
-        
-        if (len(openDirections) == 0):
-            # No open directions from current position
-            # Backtrack!
-            
+        print("*************************************")
+        print(openDirections)
+        print("*************************************")
+
+        for dxn in openDirections:
+            newPoint = Point.addTuples(currentPosition, Directions.getCoordinate(dxn))
+            # check if the newpoint is visted or not
+            # if self.visitedMap[newPoint[0], newPoint[1]] != self.VISITED:
+            print("Fount new point", newPoint)
+            print(self.visitedMap)
+            print("-------------------------------------------------")
+            return newPoint
         else:
-            # "EAST" | "NORTH" | "SOUTH" | "WEST"
-            nextStepDirection = openDirections[0]
+            # backtracking
+            print("got back to branching point")
+            print(self.branchingStack.pop()[0:2])
+            return self.branchingStack.pop()[0:2]
 
-
-
-        
         # (x,y)
-
-        
-
-
-
 
     # todo
     # return the farthest point in the needed direction
     # this point will be in the OPEN spots in the map
     # - or it can be a VISITED spot if an open slot is not found in the direct vicinity
-    def idk(self, currentPosition):
-        currentRow = currentPosition[0]
-        currentColumn = currentPosition[1]
-
-        
-
-        try:
-            if currentRow + 1 >= 0 and board[currentRow + 1, currentColumn] == OPEN:
-            
-
-        except IndexError as err:
-            print(err)
-            
-            try:
-                
-                if currentRow + 1 >= 0 and board[currentRow - 1, currentColumn] == OPEN:
-                    currentRow = currentRow + 1
-            except expression as identifier:
-
-                try:
-                    if currentColumn + 1 >= 0 and board[currentRow, currentColumn + 1] == OPEN:
-                        board[currentRow, currentColumn] = VISITED
-                except expression as identifier:
-
-                    try:
-                        if currentColumn + 1 >= 0 and board[currentRow, currentColumn - 1] == OPEN:
-                            visitedStack.append((currentRow, currentColumn))
-                    except expression as identifier:
 
 
+def startExploration(droneStartingCoordinate):
+    x = droneStartingCoordinate[0]
+    y = droneStartingCoordinate[1]
+
+    robotPositionState = NextDestination(
+        bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30}
+    )
+    dxnPriorities = robotPositionState.generateStepPriority()
+
+    print(dxnPriorities)
+
+    simpleMap = np.zeros((5, 5))
+
+    dfs = DFS(simpleMap, dxnPriorities)
+
+    nextPoint = dfs.getNextStep((x, y))
+    count = 40
+    while True:
+        if count < 0:
+            break
+        count -= 1
+        nextPoint = dfs.getNextStep(nextPoint)
 
 
-
-        if currentRow + 1 >= 0 and board[currentRow + 1, currentColumn] == OPEN:
-            # GO DOWN
-            print("GO DOWN")
-
-            # todo: the check will start at the current position
-            # and go to the vision limit from the robot
-            # if there is an obstacle before vision limit is reached consider direction blocked
-            # loop to check in a direction
-
-            # TODO
-            # Consider adding to stack before updating current position
-            # Otherwise, there is an extra check when an obstacle is reached
-            # visitedStack.append((currentRow, currentColumn))
-
-            openDirections.append("SOUTH")
-            currentRow = currentRow + 1
-            board[currentRow, currentColumn] = VISITED
-            visitedStack.append((currentRow, currentColumn))
-
-        if currentColumn + 1 >= 0 and board[currentRow, currentColumn + 1] == OPEN:
-            # GO RIGHT
-            print("GO RIGHT")
-
-            openDirections.append("EAST")
-
-            currentColumn = currentColumn + 1
-            board[currentRow, currentColumn] = VISITED
-            visitedStack.append((currentRow, currentColumn))
-
-        if (
-            currentRow - 1 >= 0
-            and currentRow - 1 != board.shape[0]
-            and board[currentRow - 1, currentColumn] == OPEN
-        ):
-            # GO UP
-            print("GO UP")
-            openDirections.append("NORTH")
-            currentRow = currentRow - 1
-            board[currentRow, currentColumn] = VISITED
-            visitedStack.append((currentRow, currentColumn))
-
-        if (
-            currentColumn - 1 >= 0
-            and currentColumn - 1 != board.shape[1]
-            and board[currentRow, currentColumn - 1] == OPEN
-        ):
-            # GO LEFT
-            print("GO LEFT")
-            openDirections.append("WEST")
-            currentColumn = currentColumn - 1
-            board[currentRow, currentColumn] = VISITED
-            visitedStack.append((currentRow, currentColumn))
-
-        else:
-            # BACKTRACK
-
-            if np.where(board == OPEN)[0].__len__() > 0:
-                pass
-            else:
-                print(">...EXPLORED...<")
-                exploring = False
-
-            if visitedStack.__len__() != 0:
-                print("Stack Before Popping: ", visitedStack)
-                currentRow, currentColumn = visitedStack.pop()
-                print("Stack After Popping: ", visitedStack)
-            else:
-                exploring = False
-
-        # todo: return next step
-
-        # todo: mark the returned next step to the visitedStack
-        # visitedStack.append((currentRow, currentColumn))
-
-
-# region
-# Create Board and Storing Stack
-# board = np.zeros((5, 5))
-
-# # Obstacles | Walls
-# board[3, 1] = 1
-# board[4, 1] = 1
-
-# visitedStack = []
-
-# Starting Point
-currentRow, currentColumn = 0, 0
-# endregion
-exploring = False
-
-board[currentRow, currentColumn] = VISITED
-visitedStack.append((currentRow, currentColumn))
-
-
-while exploring:
-    # region
-    if (
-        currentRow + 1 >= 0
-        and currentRow + 1 != board.shape[0]
-        and board[currentRow + 1, currentColumn] == OPEN
-    ):
-        # GO DOWN
-        print("GO DOWN")
-
-        # TODO
-        # Consider adding to stack before updating current position
-        # Otherwise, there is an extra check when an obstacle is reached
-        # visitedStack.append((currentRow, currentColumn))
-
-        currentRow = currentRow + 1
-        board[currentRow, currentColumn] = VISITED
-        visitedStack.append((currentRow, currentColumn))
-
-    elif (
-        currentColumn + 1 >= 0
-        and currentColumn + 1 != board.shape[1]
-        and board[currentRow, currentColumn + 1] == OPEN
-    ):
-        # GO RIGHT
-        print("GO RIGHT")
-        currentColumn = currentColumn + 1
-        board[currentRow, currentColumn] = VISITED
-        visitedStack.append((currentRow, currentColumn))
-
-    elif (
-        currentRow - 1 >= 0
-        and currentRow - 1 != board.shape[0]
-        and board[currentRow - 1, currentColumn] == OPEN
-    ):
-        # GO UP
-        print("GO UP")
-        currentRow = currentRow - 1
-        board[currentRow, currentColumn] = VISITED
-        visitedStack.append((currentRow, currentColumn))
-
-    elif (
-        currentColumn - 1 >= 0
-        and currentColumn - 1 != board.shape[1]
-        and board[currentRow, currentColumn - 1] == OPEN
-    ):
-        # GO LEFT
-        print("GO LEFT")
-        currentColumn = currentColumn - 1
-        board[currentRow, currentColumn] = VISITED
-        visitedStack.append((currentRow, currentColumn))
-
-    else:
-        # BACKTRACK
-
-        if np.where(board == OPEN)[0].__len__() > 0:
-            pass
-        else:
-            print(">...EXPLORED...<")
-            exploring = False
-
-        if visitedStack.__len__() != 0:
-            print("Stack Before Popping: ", visitedStack)
-            currentRow, currentColumn = visitedStack.pop()
-            print("Stack After Popping: ", visitedStack)
-        else:
-            exploring = False
-    # endregion
-
-    # print("currentRow: ", currentRow)
-    # print("currentColumn: ", currentColumn)
-    # print("visitedStack: ", visitedStack)
-    # print(board)
-    # print()
-
-
-# print(board)
-
-# main()
+startExploration((1, 4))

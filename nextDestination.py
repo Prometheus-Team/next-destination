@@ -8,9 +8,8 @@ class NextDestination:
     NORTH = "NORTH"
     SOUTH = "SOUTH"
 
-    def __init__(self, bounds, currentPosition):
+    def __init__(self, bounds):
         self.bounds = bounds
-        self.currentPosition = currentPosition
 
     def generateStepPriority(self):
         # Horizontal Distance
@@ -22,17 +21,17 @@ class NextDestination:
             # TODO: Add a buffer - how much should we care about a few decimal differences
             nearestHorizontalDistance = self.bounds["eastBound"]
             horizontalPriority = [self.EAST, self.WEST]
-            print("Nearest EAST", nearestHorizontalDistance)
+            # print("Nearest EAST", nearestHorizontalDistance)
         elif self.bounds["westBound"] < self.bounds["eastBound"]:
             nearestHorizontalDistance = self.bounds["westBound"]
             horizontalPriority = [self.WEST, self.EAST]
-            print("Nearest WEST", nearestHorizontalDistance)
+            # print("Nearest WEST", nearestHorizontalDistance)
         else:
             # Have Random priority
             nearestHorizontalDistance = self.bounds["eastBound"]
-            print("Nothin")
+            # print("Nothin")
 
-        print("H: ", nearestHorizontalDistance)
+        # print("H: ", nearestHorizontalDistance)
 
         # Vertical Distance
         # northDistance = abs(self.currentPosition["y"] - self.bounds["northBound"])
@@ -42,20 +41,20 @@ class NextDestination:
         if self.bounds["northBound"] < self.bounds["southBound"]:
             nearestVerticalDistance = self.bounds["northBound"]
             verticalPriority = [self.NORTH, self.SOUTH]
-            print("Nearest NORTH", nearestVerticalDistance)
+            # print("Nearest NORTH", nearestVerticalDistance)
         elif self.bounds["southBound"] < self.bounds["northBound"]:
             nearestVerticalDistance = self.bounds["southBound"]
             verticalPriority = [self.SOUTH, self.NORTH]
-            print("Nearest SOUTH", nearestVerticalDistance)
+            # print("Nearest SOUTH", nearestVerticalDistance)
         else:
             # Have Random priority
             nearestVerticalDistance = self.bounds["northBound"]
-            print("NothinGG")
+            # print("NothinGG")
 
-        print("V: ", nearestVerticalDistance)
+        # print("V: ", nearestVerticalDistance)
 
         if nearestHorizontalDistance < nearestVerticalDistance:
-            print("ONE")
+            # print("ONE")
             # stepPrecedence
             stepPriority = [
                 horizontalPriority[0],
@@ -64,7 +63,7 @@ class NextDestination:
                 horizontalPriority[1],
             ]
         elif nearestHorizontalDistance > nearestVerticalDistance:
-            print("TWO")
+            # print("TWO")
             # stepPrecedence
             stepPriority = [
                 verticalPriority[0],
@@ -73,7 +72,7 @@ class NextDestination:
                 verticalPriority[1],
             ]
         else:
-            print("THREE")
+            # print("THREE")
             # At the center so precedence does not matter
             stepPriority = [
                 verticalPriority[0],
@@ -86,12 +85,12 @@ class NextDestination:
         return directionPriority
 
 
-robotPositionState = NextDestination(
-    bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30}
-)
+# robotPositionState = NextDestination(
+#     bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30}
+# )
 
-print("LOOKIE")
-print(robotPositionState.generateStepPriority())
+# print("LOOKIE")
+# print(robotPositionState.generateStepPriority())
 
 
 # if eastBound > westBound
