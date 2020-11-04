@@ -86,7 +86,8 @@ class DFS:
 
         if len(sortedOpenDirections) > 1:
             self.branchingStack.append(
-                (currentRow, currentColumn, sortedOpenDirections)
+                # (currentRow, currentColumn, sortedOpenDirections)
+                (currentRow, currentColumn)
             )
 
         return sortedOpenDirections
@@ -111,8 +112,13 @@ class DFS:
         else:
             # backtracking
             print("got back to branching point")
-            print(self.branchingStack.pop()[0:2])
-            return self.branchingStack.pop()[0:2]
+            if len(self.branchingStack) > 0:
+                returnPoint = self.branchingStack.pop()
+                print(returnPoint)
+                return returnPoint
+            else:
+                print("no more moves")
+                return -50
 
         # (x,y)
 
@@ -137,12 +143,8 @@ def startExploration(droneStartingCoordinate):
 
     dfs = DFS(simpleMap, dxnPriorities)
 
-    nextPoint = dfs.getNextStep((x, y))
-    count = 40
-    while True:
-        if count < 0:
-            break
-        count -= 1
+    nextPoint = (x, y)
+    while nextPoint != -50:
         nextPoint = dfs.getNextStep(nextPoint)
 
 
