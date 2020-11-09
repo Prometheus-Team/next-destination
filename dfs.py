@@ -7,10 +7,13 @@ class DFS:
     OPEN = 0
     WALL = 1
     VISITED = 2
+    BUFFER = 3
     SOUTH = "SOUTH"
     NORTH = "NORTH"
     WEST = "WEST"
     EAST = "EAST"
+
+    BUFFER_SIZE = 3
 
     # todo: is this not important?
     visitedStack = []
@@ -45,6 +48,31 @@ class DFS:
         self.stepPriority = stepPriority
         # ["EAST", "NORTH", "SOUTH", "WEST"]
 
+    def addBufferToObstacles(self):
+        for rowIndex, row in enumerate(self.board):
+            for cellIndex, cell in enumerate(row):
+                if cell == self.WALL:
+                    print("HERE?")
+
+                    for i in range(self.BUFFER_SIZE * 2 + 1):
+                        for j in range(self.BUFFER_SIZE * 2 + 1):
+                            currentRowIndex = rowIndex - self.BUFFER_SIZE + i
+                            currentCellIndex = cellIndex - self.BUFFER_SIZE + j
+
+                            squaredRowDistance = (rowIndex - currentRowIndex) ** 2
+                            squaredCellDistance = (cellIndex - currentCellIndex) ** 2
+                            distance = (squaredRowDistance + squaredCellDistance) ** 0.5
+
+                            if (
+                                currentRowIndex > 0
+                                and currentCellIndex > 0
+                                and distance <= self.BUFFER_SIZE
+                            ):
+                                self.board[
+                                    rowIndex - self.BUFFER_SIZE + i,
+                                    cellIndex - self.BUFFER_SIZE + j,
+                                ] = self.BUFFER
+
     def getOpenDirections(self, currentPosition):
         currentRow = currentPosition[0]
         currentColumn = currentPosition[1]
@@ -66,6 +94,7 @@ class DFS:
             if (
                 currentRow + 1 >= 0
                 and self.board[currentRow + 1, currentColumn] == self.OPEN
+                and self.board[currentRow + 1, currentColumn] != self.BUFFER
                 and self.visitedMap[currentRow + 1, currentColumn] != self.VISITED
             ):
                 openDirections.append(self.SOUTH)
@@ -76,6 +105,7 @@ class DFS:
             if (
                 currentRow - 1 >= 0
                 and self.board[currentRow - 1, currentColumn] == self.OPEN
+                and self.board[currentRow - 1, currentColumn] != self.BUFFER
                 and self.visitedMap[currentRow - 1, currentColumn] != self.VISITED
             ):
                 openDirections.append(self.NORTH)
@@ -86,6 +116,7 @@ class DFS:
             if (
                 currentColumn + 1 >= 0
                 and self.board[currentRow, currentColumn + 1] == self.OPEN
+                and self.board[currentRow, currentColumn + 1] != self.BUFFER
                 and self.visitedMap[currentRow, currentColumn + 1] != self.VISITED
             ):
                 openDirections.append(self.EAST)
@@ -96,6 +127,7 @@ class DFS:
             if (
                 currentColumn - 1 >= 0
                 and self.board[currentRow, currentColumn - 1] == self.OPEN
+                and self.board[currentRow, currentColumn - 1] != self.BUFFER
                 and self.visitedMap[currentRow, currentColumn - 1] != self.VISITED
             ):
                 openDirections.append(self.WEST)
@@ -128,12 +160,13 @@ class DFS:
 
     # todo
     def getNextStep(self, currentPosition):
-
+        self.addBufferToObstacles()
         self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
         openDirections = self.getOpenDirections(currentPosition)
         print("*************************************")
         print(openDirections)
         print("*************************************")
+        print(self.visitedMap)
 
         for direction in openDirections:
 
@@ -196,6 +229,7 @@ class DFS:
     # - or it can be a VISITED spot if an open slot is not found in the direct vicinity
 
 
+# Example for Usage
 def startExploration(droneStartingCoordinate):
     x = droneStartingCoordinate[0]
     y = droneStartingCoordinate[1]
