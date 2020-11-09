@@ -11,17 +11,36 @@ class DFS:
     NORTH = "NORTH"
     WEST = "WEST"
     EAST = "EAST"
+
+    # todo: is this not important?
     visitedStack = []
+
     branchingStack = []
     # todo: the visited stack needs to be updated when the robot moves across a line
     # todo: add branching stack
 
+    # todo: discuss with Milky
+    # ? Should we check distances from currentPosition to the closest branching point? Instead of going back to the last seen branching point?
+    # ?
+
     def __init__(self, board, stepPriority):
         self.board = board
+        # loop through the board
+        # when you get a 1, set the below to self.BUFFER
+        # row1 - row2
+        # column1 - column2
+
         self.visitedMap = np.zeros(board.shape)
         # 2D num-py array
         # [[,]]
         # value of a cell --> OPEN, WALL, VISITED, UNVISITED, ROBOT POSITION
+
+        # todo: discuss with Sami
+        # ? Open, Wall, and Unvisited should be already in Sami's input
+        # ? We're keeping track of Visited in this class.
+        # ? It would be great if we can get the Robot's Position from Sami.
+
+        # padding/buffer to check whether something is an obstacle
 
         self.stepPriority = stepPriority
         # ["EAST", "NORTH", "SOUTH", "WEST"]
@@ -33,8 +52,15 @@ class DFS:
         openDirections = []
         sortedOpenDirections = []
 
+        # todo: discuss with Sami/Milky??
         # todo: the +/- 1 values should actually be the vision range of the robot.
         # todo: OR we should decide on the size of a "TILE"
+
+        # decide on adding padding to openings on both sides...
+        # dimension of robot - 30x30
+        # min distance traveled 30cm
+
+        # ?: ORRRR maybe set the next go to point to a place where we think we might find an open space that is facing our preferred direction
 
         try:
             if (
@@ -85,10 +111,18 @@ class DFS:
             sortedOpenDirections[i] = self.stepPriority[1][sortedOpenDirections[i]]
 
         if len(sortedOpenDirections) > 1:
-            self.branchingStack.append(
-                # (currentRow, currentColumn, sortedOpenDirections)
-                (currentRow, currentColumn)
-            )
+            if len(self.branchingStack) == 0 or (
+                len(self.branchingStack) > 0
+                and self.branchingStack[-1]
+                != (
+                    currentRow,
+                    currentColumn,
+                )
+            ):
+                self.branchingStack.append(
+                    # (currentRow, currentColumn, sortedOpenDirections)
+                    (currentRow, currentColumn)
+                )
 
         return sortedOpenDirections
 
@@ -101,23 +135,57 @@ class DFS:
         print(openDirections)
         print("*************************************")
 
-        for dxn in openDirections:
-            newPoint = Point.addTuples(currentPosition, Directions.getCoordinate(dxn))
-            # check if the newpoint is visted or not
-            # if self.visitedMap[newPoint[0], newPoint[1]] != self.VISITED:
-            print("Fount new point", newPoint)
-            print(self.visitedMap)
-            print("-------------------------------------------------")
-            return newPoint
+        for direction in openDirections:
+
+            if self.stepPriority[0][direction] == 1:
+                while True:
+                    newPoint = Point.addTuples(
+                        currentPosition, Directions.getCoordinate(direction)
+                    )
+
+                    openDirections = self.getOpenDirections(newPoint)
+                    if (
+                        len(openDirections) > 0
+                        and self.stepPriority[0][openDirections[0]] == 1
+                    ):
+
+                        self.visitedMap[newPoint[0], newPoint[1]] = self.VISITED
+                        currentPosition = newPoint
+                    else:
+                        return newPoint
+
+            else:
+                prevStepPriority = self.stepPriority[0][direction]
+
+                while True:
+                    newPoint = Point.addTuples(
+                        currentPosition, Directions.getCoordinate(direction)
+                    )
+
+                    openDirections = self.getOpenDirections(newPoint)
+                    if (
+                        len(openDirections) > 0
+                        and self.stepPriority[0][openDirections[0]] < prevStepPriority
+                    ):
+                        return newPoint
+                    elif (
+                        len(openDirections) > 0
+                        and self.stepPriority[0][openDirections[0]] == prevStepPriority
+                    ):
+                        self.visitedMap[newPoint[0], newPoint[1]] = self.VISITED
+                        currentPosition = newPoint
+                    else:
+                        return newPoint
+
         else:
             # backtracking
-            print("got back to branching point")
+            # print("got back to branching point")
             if len(self.branchingStack) > 0:
                 returnPoint = self.branchingStack.pop()
-                print(returnPoint)
+                # print(returnPoint)
                 return returnPoint
             else:
-                print("no more moves")
+                # print("no more moves")
                 return -50
 
         # (x,y)
@@ -132,12 +200,13 @@ def startExploration(droneStartingCoordinate):
     x = droneStartingCoordinate[0]
     y = droneStartingCoordinate[1]
 
+    # todo: drone starting coordinate should be the bounds in the next line
     robotPositionState = NextDestination(
         bounds={"northBound": 20, "southBound": 20, "westBound": 10, "eastBound": 30}
     )
     dxnPriorities = robotPositionState.generateStepPriority()
 
-    print(dxnPriorities)
+    # print("Direction Priorities: ", dxnPriorities)
 
     simpleMap = np.zeros((5, 5))
 
