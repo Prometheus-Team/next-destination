@@ -159,16 +159,86 @@ class DFS:
         return sortedOpenDirections
 
     # todo
+    def updateVisitedMap(self, currentPosition, direction):
+        self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
+
+        VISITING_RANGE = 4
+        if direction == "NORTH" or direction == "SOUTH":
+            # if facing NORTH or SOUTH, mark adjacent (EAST and WEST) positions inside the VISION_RANGE as VISITED
+            for i in range(VISITING_RANGE):
+                topSideAdjacentCellColumn = currentPosition[1] - i - 1
+                bottomSideAdjacentCellColumn = currentPosition[1] + i + 1
+
+                if topSideAdjacentCellColumn < 0:
+                    topSideAdjacentCellColumn = 0
+
+                # todo: check for out of bounds exceptions
+                if (
+                    self.visitedMap[currentPosition[0], topSideAdjacentCellColumn]
+                    != self.VISITED
+                    and self.board[currentPosition[0], topSideAdjacentCellColumn]
+                    == self.OPEN
+                ):
+                    self.visitedMap[
+                        currentPosition[0], topSideAdjacentCellColumn
+                    ] = self.VISITED
+
+                elif (
+                    self.visitedMap[currentPosition[0], bottomSideAdjacentCellColumn]
+                    != self.VISITED
+                    and self.board[currentPosition[0], bottomSideAdjacentCellColumn]
+                    == self.OPEN
+                ):
+                    self.visitedMap[
+                        currentPosition[0], bottomSideAdjacentCellColumn
+                    ] = self.VISITED
+
+                else:
+                    break
+
+        elif direction == "EAST" or direction == "WEST":
+            for i in range(VISITING_RANGE):
+                topSideAdjacentCellColumn = currentPosition[0] - i - 1
+                bottomSideAdjacentCellColumn = currentPosition[0] + i + 1
+
+                if topSideAdjacentCellColumn < 0:
+                    topSideAdjacentCellColumn = 0
+
+                # todo: check for out of bounds exceptions
+                if (
+                    self.visitedMap[topSideAdjacentCellColumn, currentPosition[1]]
+                    != self.VISITED
+                    and self.board[topSideAdjacentCellColumn, currentPosition[1]]
+                    == self.OPEN
+                ):
+                    self.visitedMap[
+                        topSideAdjacentCellColumn, currentPosition[1]
+                    ] = self.VISITED
+
+                elif (
+                    self.visitedMap[bottomSideAdjacentCellColumn, currentPosition[1]]
+                    != self.VISITED
+                    and self.board[bottomSideAdjacentCellColumn, currentPosition[1]]
+                    == self.OPEN
+                ):
+                    self.visitedMap[
+                        bottomSideAdjacentCellColumn, currentPosition[1]
+                    ] = self.VISITED
+
+                else:
+                    break
+
     def getNextStep(self, currentPosition):
         self.addBufferToObstacles()
-        self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
         openDirections = self.getOpenDirections(currentPosition)
+
         print("*************************************")
         print(openDirections)
         print("*************************************")
         print(self.visitedMap)
 
         for direction in openDirections:
+            self.updateVisitedMap(currentPosition, direction)
 
             if self.stepPriority[0][direction] == 1:
                 while True:
