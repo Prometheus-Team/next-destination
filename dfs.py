@@ -151,6 +151,8 @@ class DFS:
                     currentColumn,
                 )
             ):
+                # todo: append also on the edge of updateVisitedMap where we go to the edge of the VISION_RANGE
+
                 self.branchingStack.append(
                     # (currentRow, currentColumn, sortedOpenDirections)
                     (currentRow, currentColumn)
@@ -165,38 +167,60 @@ class DFS:
         VISITING_RANGE = 4
         if direction == "NORTH" or direction == "SOUTH":
             # if facing NORTH or SOUTH, mark adjacent (EAST and WEST) positions inside the VISION_RANGE as VISITED
+
+            continueLeftCheck = True
+            continueRightCheck = True
             for i in range(VISITING_RANGE):
-                topSideAdjacentCellColumn = currentPosition[1] - i - 1
-                bottomSideAdjacentCellColumn = currentPosition[1] + i + 1
 
-                if topSideAdjacentCellColumn < 0:
-                    topSideAdjacentCellColumn = 0
+                # todo: add the position to branching stack on the last loop
+                if continueLeftCheck is False and continueRightCheck is False:
+                    break
 
-                # todo: check for out of bounds exceptions
-                if (
-                    self.visitedMap[currentPosition[0], topSideAdjacentCellColumn]
-                    != self.VISITED
-                    and self.board[currentPosition[0], topSideAdjacentCellColumn]
-                    == self.OPEN
-                ):
-                    self.visitedMap[
-                        currentPosition[0], topSideAdjacentCellColumn
-                    ] = self.VISITED
+                leftSideAdjacentCellColumn = currentPosition[1] - i - 1
+                rightSideAdjacentCellColumn = currentPosition[1] + i + 1
 
-                elif (
-                    self.visitedMap[currentPosition[0], bottomSideAdjacentCellColumn]
-                    != self.VISITED
-                    and self.board[currentPosition[0], bottomSideAdjacentCellColumn]
-                    == self.OPEN
-                ):
-                    self.visitedMap[
-                        currentPosition[0], bottomSideAdjacentCellColumn
-                    ] = self.VISITED
+                if leftSideAdjacentCellColumn < 0:
+                    leftSideAdjacentCellColumn = 0
 
-                else:
+                try:
+                    if (
+                        continueLeftCheck
+                        and self.visitedMap[
+                            currentPosition[0], leftSideAdjacentCellColumn
+                        ]
+                        != self.VISITED
+                        and self.board[currentPosition[0], leftSideAdjacentCellColumn]
+                        == self.OPEN
+                    ):
+                        self.visitedMap[
+                            currentPosition[0], leftSideAdjacentCellColumn
+                        ] = self.VISITED
+                    else:
+                        continueLeftCheck = False
+
+                    if (
+                        continueRightCheck
+                        and self.visitedMap[
+                            currentPosition[0], rightSideAdjacentCellColumn
+                        ]
+                        != self.VISITED
+                        and self.board[currentPosition[0], rightSideAdjacentCellColumn]
+                        == self.OPEN
+                    ):
+                        self.visitedMap[
+                            currentPosition[0], rightSideAdjacentCellColumn
+                        ] = self.VISITED
+
+                    else:
+                        continueRightCheck = False
+
+                except IndexError:
                     break
 
         elif direction == "EAST" or direction == "WEST":
+            continueTopCheck = True
+            continueBottomCheck = True
+
             for i in range(VISITING_RANGE):
                 topSideAdjacentCellColumn = currentPosition[0] - i - 1
                 bottomSideAdjacentCellColumn = currentPosition[0] + i + 1
@@ -204,33 +228,52 @@ class DFS:
                 if topSideAdjacentCellColumn < 0:
                     topSideAdjacentCellColumn = 0
 
-                # todo: check for out of bounds exceptions
-                if (
-                    self.visitedMap[topSideAdjacentCellColumn, currentPosition[1]]
-                    != self.VISITED
-                    and self.board[topSideAdjacentCellColumn, currentPosition[1]]
-                    == self.OPEN
-                ):
-                    self.visitedMap[
-                        topSideAdjacentCellColumn, currentPosition[1]
-                    ] = self.VISITED
+                if continueTopCheck is False and continueBottomCheck is False:
+                    break
 
-                elif (
-                    self.visitedMap[bottomSideAdjacentCellColumn, currentPosition[1]]
-                    != self.VISITED
-                    and self.board[bottomSideAdjacentCellColumn, currentPosition[1]]
-                    == self.OPEN
-                ):
-                    self.visitedMap[
-                        bottomSideAdjacentCellColumn, currentPosition[1]
-                    ] = self.VISITED
+                try:
+                    if (
+                        continueTopCheck
+                        and self.visitedMap[
+                            topSideAdjacentCellColumn, currentPosition[1]
+                        ]
+                        != self.VISITED
+                        and self.board[topSideAdjacentCellColumn, currentPosition[1]]
+                        == self.OPEN
+                    ):
+                        self.visitedMap[
+                            topSideAdjacentCellColumn, currentPosition[1]
+                        ] = self.VISITED
+                    else:
+                        continueTopCheck = False
 
-                else:
+                    if (
+                        continueBottomCheck
+                        and self.visitedMap[
+                            bottomSideAdjacentCellColumn, currentPosition[1]
+                        ]
+                        != self.VISITED
+                        and self.board[bottomSideAdjacentCellColumn, currentPosition[1]]
+                        == self.OPEN
+                    ):
+                        self.visitedMap[
+                            bottomSideAdjacentCellColumn, currentPosition[1]
+                        ] = self.VISITED
+
+                    else:
+                        continueBottomCheck = False
+
+                except IndexError:
                     break
 
     def getNextStep(self, currentPosition):
         self.addBufferToObstacles()
         openDirections = self.getOpenDirections(currentPosition)
+
+        directionFacing = ""
+        if len(openDirections) > 0:
+            directionFacing = openDirections[0]
+        self.updateVisitedMap(currentPosition, directionFacing)
 
         print("*************************************")
         print(openDirections)
@@ -238,7 +281,6 @@ class DFS:
         print(self.visitedMap)
 
         for direction in openDirections:
-            self.updateVisitedMap(currentPosition, direction)
 
             if self.stepPriority[0][direction] == 1:
                 while True:
@@ -251,8 +293,7 @@ class DFS:
                         len(openDirections) > 0
                         and self.stepPriority[0][openDirections[0]] == 1
                     ):
-
-                        self.visitedMap[newPoint[0], newPoint[1]] = self.VISITED
+                        self.updateVisitedMap(newPoint, direction)
                         currentPosition = newPoint
                     else:
                         return newPoint
@@ -275,7 +316,7 @@ class DFS:
                         len(openDirections) > 0
                         and self.stepPriority[0][openDirections[0]] == prevStepPriority
                     ):
-                        self.visitedMap[newPoint[0], newPoint[1]] = self.VISITED
+                        self.updateVisitedMap(newPoint, direction)
                         currentPosition = newPoint
                     else:
                         return newPoint
