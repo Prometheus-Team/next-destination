@@ -281,45 +281,27 @@ class DFS:
         print(self.visitedMap)
 
         for direction in openDirections:
+            prevStepPriority = self.stepPriority[0][direction]
 
-            if self.stepPriority[0][direction] == 1:
-                while True:
-                    newPoint = Point.addTuples(
-                        currentPosition, Directions.getCoordinate(direction)
-                    )
+            while True:
+                newPoint = Point.addTuples(
+                    currentPosition, Directions.getCoordinate(direction)
+                )
 
-                    openDirections = self.getOpenDirections(newPoint)
-                    if (
-                        len(openDirections) > 0
-                        and self.stepPriority[0][openDirections[0]] == 1
-                    ):
-                        self.updateVisitedMap(newPoint, direction)
-                        currentPosition = newPoint
-                    else:
-                        return newPoint
-
-            else:
-                prevStepPriority = self.stepPriority[0][direction]
-
-                while True:
-                    newPoint = Point.addTuples(
-                        currentPosition, Directions.getCoordinate(direction)
-                    )
-
-                    openDirections = self.getOpenDirections(newPoint)
-                    if (
-                        len(openDirections) > 0
-                        and self.stepPriority[0][openDirections[0]] < prevStepPriority
-                    ):
-                        return newPoint
-                    elif (
-                        len(openDirections) > 0
-                        and self.stepPriority[0][openDirections[0]] == prevStepPriority
-                    ):
-                        self.updateVisitedMap(newPoint, direction)
-                        currentPosition = newPoint
-                    else:
-                        return newPoint
+                openDirections = self.getOpenDirections(newPoint)
+                if (
+                    len(openDirections) > 0
+                    and self.stepPriority[0][openDirections[0]] < prevStepPriority
+                ):
+                    return newPoint
+                elif (
+                    len(openDirections) > 0
+                    and self.stepPriority[0][openDirections[0]] == prevStepPriority
+                ):
+                    self.updateVisitedMap(newPoint, direction)
+                    currentPosition = newPoint
+                else:
+                    return newPoint
 
         else:
             # backtracking
