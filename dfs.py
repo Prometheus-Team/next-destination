@@ -73,6 +73,15 @@ class DFS:
                                     cellIndex - self.BUFFER_SIZE + j,
                                 ] = self.BUFFER
 
+    def canGoTo(self, position):
+        canGoTo = (
+            self.board[position] == self.OPEN
+            and self.board[position] != self.BUFFER
+            and self.visitedMap[position] != self.VISITED
+        )
+
+        return canGoTo
+
     def getOpenDirections(self, currentPosition):
         currentRow = currentPosition[0]
         currentColumn = currentPosition[1]
@@ -88,50 +97,30 @@ class DFS:
         # dimension of robot - 30x30
         # min distance traveled 30cm
 
-        # ?: ORRRR maybe set the next go to point to a place where we think we might find an open space that is facing our preferred direction
+        # ?: OR maybe set the next go to point to a place where we think we might find an open space that is facing our preferred direction
 
         try:
-            if (
-                currentRow + 1 >= 0
-                and self.board[currentRow + 1, currentColumn] == self.OPEN
-                and self.board[currentRow + 1, currentColumn] != self.BUFFER
-                and self.visitedMap[currentRow + 1, currentColumn] != self.VISITED
-            ):
+            if currentRow + 1 >= 0 and self.canGoTo((currentRow + 1, currentColumn)):
                 openDirections.append(self.SOUTH)
-        except IndexError as err:
+        except IndexError:
             pass
 
         try:
-            if (
-                currentRow - 1 >= 0
-                and self.board[currentRow - 1, currentColumn] == self.OPEN
-                and self.board[currentRow - 1, currentColumn] != self.BUFFER
-                and self.visitedMap[currentRow - 1, currentColumn] != self.VISITED
-            ):
+            if currentRow - 1 >= 0 and self.canGoTo((currentRow - 1, currentColumn)):
                 openDirections.append(self.NORTH)
-        except IndexError as err:
+        except IndexError:
             pass
 
         try:
-            if (
-                currentColumn + 1 >= 0
-                and self.board[currentRow, currentColumn + 1] == self.OPEN
-                and self.board[currentRow, currentColumn + 1] != self.BUFFER
-                and self.visitedMap[currentRow, currentColumn + 1] != self.VISITED
-            ):
+            if currentColumn + 1 >= 0 and self.canGoTo((currentRow, currentColumn + 1)):
                 openDirections.append(self.EAST)
-        except IndexError as err:
+        except IndexError:
             pass
 
         try:
-            if (
-                currentColumn - 1 >= 0
-                and self.board[currentRow, currentColumn - 1] == self.OPEN
-                and self.board[currentRow, currentColumn - 1] != self.BUFFER
-                and self.visitedMap[currentRow, currentColumn - 1] != self.VISITED
-            ):
+            if currentColumn - 1 >= 0 and self.canGoTo((currentRow, currentColumn - 1)):
                 openDirections.append(self.WEST)
-        except IndexError as err:
+        except IndexError:
             pass
 
         for i in openDirections:
@@ -142,25 +131,8 @@ class DFS:
         for i in range(len(sortedOpenDirections)):
             sortedOpenDirections[i] = self.stepPriority[1][sortedOpenDirections[i]]
 
-        if len(sortedOpenDirections) > 1:
-            if len(self.branchingStack) == 0 or (
-                len(self.branchingStack) > 0
-                and self.branchingStack[-1]
-                != (
-                    currentRow,
-                    currentColumn,
-                )
-            ):
-                # todo: append also on the edge of updateVisitedMap where we go to the edge of the VISION_RANGE
-
-                self.branchingStack.append(
-                    # (currentRow, currentColumn, sortedOpenDirections)
-                    (currentRow, currentColumn)
-                )
-
         return sortedOpenDirections
 
-    # todo
     def updateVisitedMap(self, currentPosition, direction):
         self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
 
@@ -183,33 +155,30 @@ class DFS:
                     leftSideAdjacentCellColumn = 0
 
                 try:
-                    if (
-                        continueLeftCheck
-                        and self.visitedMap[
-                            currentPosition[0], leftSideAdjacentCellColumn
-                        ]
-                        != self.VISITED
-                        and self.board[currentPosition[0], leftSideAdjacentCellColumn]
-                        == self.OPEN
-                    ):
-                        self.visitedMap[
-                            currentPosition[0], leftSideAdjacentCellColumn
-                        ] = self.VISITED
+                    leftAdjacentPoint = (currentPosition[0], leftSideAdjacentCellColumn)
+                    rightAdjacentPoint = (
+                        currentPosition[0],
+                        rightSideAdjacentCellColumn,
+                    )
+
+                    if continueLeftCheck and self.canGoTo(leftAdjacentPoint):
+                        self.visitedMap[leftAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (leftAdjacentPoint[0], leftAdjacentPoint[1] - 1)
+                        ):
+                            self.branchingStack.append(leftAdjacentPoint)
+
                     else:
                         continueLeftCheck = False
 
-                    if (
-                        continueRightCheck
-                        and self.visitedMap[
-                            currentPosition[0], rightSideAdjacentCellColumn
-                        ]
-                        != self.VISITED
-                        and self.board[currentPosition[0], rightSideAdjacentCellColumn]
-                        == self.OPEN
-                    ):
-                        self.visitedMap[
-                            currentPosition[0], rightSideAdjacentCellColumn
-                        ] = self.VISITED
+                    if continueRightCheck and self.canGoTo(rightAdjacentPoint):
+                        self.visitedMap[rightAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (rightAdjacentPoint[0], rightAdjacentPoint[1] + 1)
+                        ):
+                            self.branchingStack.append(rightAdjacentPoint)
 
                     else:
                         continueRightCheck = False
@@ -232,33 +201,36 @@ class DFS:
                     break
 
                 try:
-                    if (
-                        continueTopCheck
-                        and self.visitedMap[
-                            topSideAdjacentCellColumn, currentPosition[1]
-                        ]
-                        != self.VISITED
-                        and self.board[topSideAdjacentCellColumn, currentPosition[1]]
-                        == self.OPEN
-                    ):
-                        self.visitedMap[
-                            topSideAdjacentCellColumn, currentPosition[1]
-                        ] = self.VISITED
+                    topAdjacentPoint = (topSideAdjacentCellColumn, currentPosition[1])
+                    bottomAdjacentPoint = (
+                        bottomSideAdjacentCellColumn,
+                        currentPosition[1],
+                    )
+
+                    if continueTopCheck and self.canGoTo((topAdjacentPoint)):
+                        self.visitedMap[topAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (
+                                topAdjacentPoint[0] - 1,
+                                topAdjacentPoint[1],
+                            )
+                        ):
+                            self.branchingStack.append(topAdjacentPoint)
+
                     else:
                         continueTopCheck = False
 
-                    if (
-                        continueBottomCheck
-                        and self.visitedMap[
-                            bottomSideAdjacentCellColumn, currentPosition[1]
-                        ]
-                        != self.VISITED
-                        and self.board[bottomSideAdjacentCellColumn, currentPosition[1]]
-                        == self.OPEN
-                    ):
-                        self.visitedMap[
-                            bottomSideAdjacentCellColumn, currentPosition[1]
-                        ] = self.VISITED
+                    if continueBottomCheck and self.canGoTo((bottomAdjacentPoint)):
+                        self.visitedMap[bottomAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (
+                                bottomAdjacentPoint[0] + 1,
+                                bottomAdjacentPoint[1],
+                            )
+                        ):
+                            self.branchingStack.append(bottomAdjacentPoint)
 
                     else:
                         continueBottomCheck = False
@@ -269,6 +241,13 @@ class DFS:
     def getNextStep(self, currentPosition):
         self.addBufferToObstacles()
         openDirections = self.getOpenDirections(currentPosition)
+
+        if len(openDirections) > 1:
+            if len(self.branchingStack) == 0 or (
+                len(self.branchingStack) > 0
+                and self.branchingStack[-1] != (currentPosition)
+            ):
+                self.branchingStack.append(currentPosition)
 
         directionFacing = ""
         if len(openDirections) > 0:
@@ -290,11 +269,6 @@ class DFS:
 
                 openDirections = self.getOpenDirections(newPoint)
                 if (
-                    len(openDirections) > 0
-                    and self.stepPriority[0][openDirections[0]] < prevStepPriority
-                ):
-                    return newPoint
-                elif (
                     len(openDirections) > 0
                     and self.stepPriority[0][openDirections[0]] == prevStepPriority
                 ):
@@ -344,4 +318,4 @@ def startExploration(droneStartingCoordinate):
         nextPoint = dfs.getNextStep(nextPoint)
 
 
-startExploration((1, 4))
+startExploration((2, 4))
