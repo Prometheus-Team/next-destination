@@ -1,0 +1,23 @@
+
+---
+
+starting coordinate (current position)
+
+north/south/east/west
+
+
+x currentPositionX
+y currentPositionY
+
+(x,y) currentPosition
+
+np.array[<size x,y>] map
+
+size of map
+-> currentPosition[0] distance to left
+-> sizeOfMapX - ^ = distance to right
+
+-> currentPosition[1] distance to top
+-> sizeOfMapY - ^ = distance to bottom
+
+usually
