@@ -26,14 +26,28 @@ class Exploration:
     # ? Should we check distances from currentPosition to the closest branching point? Instead of going back to the last seen branching point?
     # ?
 
-    def __init__(self, board, stepPriority):
-        self.board = board
+    def initConfigService(self, req):
+        self.initConfig(
+            mapShape=(req.width, req.height),
+            bounds={
+                "northBound": req.up,
+                "southBound": req.down,
+                "westBound": req.left,
+                "eastBound": req.right,
+            },
+        )
+
+    def getNextStepService(self, req):
+        self.getNextStep(updatedMap=req.grid, currentPosition=(req.x, req.y))
+
+    def initConfig(self, mapShape, bounds):
+        # self.board = areaMap
         # loop through the board
         # when you get a 1, set the below to self.BUFFER
         # row1 - row2
         # column1 - column2
 
-        self.visitedMap = np.zeros(board.shape)
+        self.visitedMap = np.zeros(mapShape)
         # 2D num-py array
         # [[,]]
         # value of a cell --> OPEN, WALL, VISITED, UNVISITED, ROBOT POSITION
@@ -45,54 +59,18 @@ class Exploration:
 
         # padding/buffer to check whether something is an obstacle
 
-        self.stepPriority = stepPriority
+        # self.stepPriority = stepPriority
         # ["EAST", "NORTH", "SOUTH", "WEST"]
 
-    def setDirectionPriorities(self):
         robotPositionState = NextDestination(
             bounds={
-                "northBound": 0,
-                "southBound": 500,
-                "westBound": 0,
-                "eastBound": 500,
+                "northBound": bounds["northBound"],
+                "southBound": bounds["southBound"],
+                "westBound": bounds["westBound"],
+                "eastBound": bounds["eastBound"],
             }
         )
-        self.directionPriorities = robotPositionState.generateStepPriority()
-
-    # Tuple with 2 elements
-    # (X, Y) - where X is the row index
-    #       - where Y is the column index
-    def getNextStepService(self, areaMap, nextPoint):
-
-        self.board = areaMap
-        self.getNextStep(nextPoint)
-
-        # while nextPoint != -50: Interrupt
-
-    def addBufferToObstacles(self):
-        for rowIndex, row in enumerate(self.board):
-            for cellIndex, cell in enumerate(row):
-                if cell == self.WALL:
-                    print("HERE?")
-
-                    for i in range(self.BUFFER_SIZE * 2 + 1):
-                        for j in range(self.BUFFER_SIZE * 2 + 1):
-                            currentRowIndex = rowIndex - self.BUFFER_SIZE + i
-                            currentCellIndex = cellIndex - self.BUFFER_SIZE + j
-
-                            squaredRowDistance = (rowIndex - currentRowIndex) ** 2
-                            squaredCellDistance = (cellIndex - currentCellIndex) ** 2
-                            distance = (squaredRowDistance + squaredCellDistance) ** 0.5
-
-                            if (
-                                currentRowIndex > 0
-                                and currentCellIndex > 0
-                                and distance <= self.BUFFER_SIZE
-                            ):
-                                self.board[
-                                    rowIndex - self.BUFFER_SIZE + i,
-                                    cellIndex - self.BUFFER_SIZE + j,
-                                ] = self.BUFFER
+        self.stepPriority = robotPositionState.generateStepPriority()
 
     def canGoTo(self, position):
         canGoTo = (
@@ -157,7 +135,8 @@ class Exploration:
     def updateVisitedMap(self, currentPosition, direction):
         self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
 
-        VISITING_RANGE = 4
+        VISITING_RANGE = 1
+        # VISITING_RANGE = 4
         if direction == "NORTH" or direction == "SOUTH":
             # if facing NORTH or SOUTH, mark adjacent (EAST and WEST) positions inside the VISION_RANGE as VISITED
 
@@ -262,8 +241,11 @@ class Exploration:
     # Tuple with 2 elements
     # (X, Y) - where X is the row index
     #       - where Y is the column index
-    def getNextStep(self, currentPosition):
-        self.addBufferToObstacles()
+    def getNextStep(self, updatedMap, currentPosition):
+        self.board = updatedMap
+        unexploredPositions = np.where(self.visitedMap == self.OPEN)
+        if len(unexploredPositions[0]) == 0 and len(unexploredPositions[0]) == 0:
+            return []
         openDirections = self.getOpenDirections(currentPosition)
 
         if len(openDirections) > 1:
@@ -281,7 +263,7 @@ class Exploration:
         # print("*************************************")
         # print(openDirections)
         # print("*************************************")
-        # print(self.visitedMap)
+        print(self.visitedMap)
 
         for direction in openDirections:
             prevStepPriority = self.stepPriority[0][direction]
@@ -320,6 +302,20 @@ class Exploration:
     # - or it can be a VISITED spot if an open slot is not found in the direct vicinity
 
 
+def newExploration():
+    simpleMap = np.zeros((5, 5))
+
+    exploration = Exploration(
+        areaMap=simpleMap,
+        bounds={"northBound": 0, "southBound": 20, "westBound": 0, "eastBound": 20},
+    )
+
+    updatedMap = np.zeros((5, 5))
+
+    currentPosition = (1, 2)
+    exploration.getNextStep(updatedMap, currentPosition)
+
+
 # Example for Usage
 def startExploration(droneStartingCoordinate):
     x = droneStartingCoordinate[0]
@@ -327,21 +323,28 @@ def startExploration(droneStartingCoordinate):
 
     # todo: drone starting coordinate should be the bounds in the next line
     robotPositionState = NextDestination(
-        bounds={"northBound": 0, "southBound": 500, "westBound": 0, "eastBound": 500}
+        bounds={"northBound": 0, "southBound": 20, "westBound": 0, "eastBound": 20}
     )
     dxnPriorities = robotPositionState.generateStepPriority()
 
     print("Direction Priorities: ", dxnPriorities)
 
-    simpleMap = np.zeros((100, 100))
+    simpleMap = np.zeros((5, 5))
 
-    exploration = Exploration(simpleMap, dxnPriorities)
+    updatedMap = np.zeros((5, 5))
+
+    # exploration = Exploration(simpleMap, dxnPriorities)
+    exploration = Exploration(
+        areaMap=simpleMap,
+        bounds={"northBound": 0, "southBound": 20, "westBound": 0, "eastBound": 20},
+    )
 
     nextPoint = (x, y)
     while nextPoint != -50:
 
-        print("nextPoint: ", nextPoint)
-        nextPoint = exploration.getNextStep(nextPoint)
+        # print("nextPoint: ", nextPoint)
+        nextPoint = exploration.getNextStep(updatedMap, nextPoint)
+        # nextPoint = exploration.getNextStep(nextPoint)
 
 
-startExploration((0, 0))
+startExploration((1, 4))
