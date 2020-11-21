@@ -1,133 +1,347 @@
 import numpy as np
-import math
-
-# 0 - Undiscovered cell
-# 1 - Wall or Obstacle
-# 2 - Discovered Cell
-# 3 - Discovered and Next to Walls
+from util import Directions, Point
+from nextDestination import NextDestination
 
 
-VISION_RANGE = 5
-VISION_ANGLE = 90
-INITIAL_BEARING = "north"
-BEARING = math.radians(45)
+class Exploration:
+    OPEN = 0
+    WALL = 1
+    VISITED = 2
+    BUFFER = 3
+    SOUTH = "SOUTH"
+    NORTH = "NORTH"
+    WEST = "WEST"
+    EAST = "EAST"
 
-# Playground
-area = np.zeros((20, 20))
+    BUFFER_SIZE = 3
 
+    # todo: is this not important?
+    visitedStack = []
 
-# Place the dude in the middle
-centerRow = int(area.shape[0] / 2)
-centerColumn = int(area.shape[1] / 2)
+    branchingStack = []
+    # todo: the visited stack needs to be updated when the robot moves across a line
+    # todo: add branching stack
 
-area[centerRow, centerColumn] = 1
+    # todo: discuss with Milky
+    # ? Should we check distances from currentPosition to the closest branching point? Instead of going back to the last seen branching point?
+    # ?
 
-areaCopy = np.zeros((20, 20))
-areaCopy[centerRow, centerColumn] = 1
+    def __init__(self, board, stepPriority):
+        self.board = board
+        # loop through the board
+        # when you get a 1, set the below to self.BUFFER
+        # row1 - row2
+        # column1 - column2
 
-# block = area[
-#     centerRow - VISION_RANGE : centerRow + 1,
-#     centerColumn - VISION_RANGE : centerColumn + VISION_RANGE + 1,
-# ]
+        self.visitedMap = np.zeros(board.shape)
+        # 2D num-py array
+        # [[,]]
+        # value of a cell --> OPEN, WALL, VISITED, UNVISITED, ROBOT POSITION
 
-for rowIndex, row in enumerate(
-    area[
-        centerRow - VISION_RANGE : centerRow + 1,
-        centerColumn - VISION_RANGE : centerColumn + VISION_RANGE + 1,
-    ]
-):
-    for columnIndex, item in enumerate(row):
+        # todo: discuss with Sami
+        # ? Open, Wall, and Unvisited should be already in Sami's input
+        # ? We're keeping track of Visited in this class.
+        # ? It would be great if we can get the Robot's Position from Sami.
 
-        # the row at the edge
-        # TODO: change 5 to the length of rows?
-        # TODO: or maybe the max distance from the position of the robot?
-        rowDistace = 5 - rowIndex
-        squaredRowDistance = rowDistace ** 2
+        # padding/buffer to check whether something is an obstacle
 
-        # the column at the center
-        # TODO: change 5 to the length of columns divided by 2?
-        # TODO: or maybe the max distance from the position of the robot?
-        columnDistance = columnIndex - 5
-        squaredColumnDistance = columnDistance ** 2
+        self.stepPriority = stepPriority
+        # ["EAST", "NORTH", "SOUTH", "WEST"]
 
-        distance = (squaredRowDistance + squaredColumnDistance) ** 0.5
+    def setDirectionPriorities(self):
+        robotPositionState = NextDestination(
+            bounds={
+                "northBound": 0,
+                "southBound": 500,
+                "westBound": 0,
+                "eastBound": 500,
+            }
+        )
+        self.directionPriorities = robotPositionState.generateStepPriority()
 
-        if columnDistance == 0:
-            if rowDistace > 0:
-                angle = 90
-            # else:
-            #     angle = 270
+    # Tuple with 2 elements
+    # (X, Y) - where X is the row index
+    #       - where Y is the column index
+    def getNextStepService(self, areaMap, nextPoint):
+
+        self.board = areaMap
+        self.getNextStep(nextPoint)
+
+        # while nextPoint != -50: Interrupt
+
+    def addBufferToObstacles(self):
+        for rowIndex, row in enumerate(self.board):
+            for cellIndex, cell in enumerate(row):
+                if cell == self.WALL:
+                    print("HERE?")
+
+                    for i in range(self.BUFFER_SIZE * 2 + 1):
+                        for j in range(self.BUFFER_SIZE * 2 + 1):
+                            currentRowIndex = rowIndex - self.BUFFER_SIZE + i
+                            currentCellIndex = cellIndex - self.BUFFER_SIZE + j
+
+                            squaredRowDistance = (rowIndex - currentRowIndex) ** 2
+                            squaredCellDistance = (cellIndex - currentCellIndex) ** 2
+                            distance = (squaredRowDistance + squaredCellDistance) ** 0.5
+
+                            if (
+                                currentRowIndex > 0
+                                and currentCellIndex > 0
+                                and distance <= self.BUFFER_SIZE
+                            ):
+                                self.board[
+                                    rowIndex - self.BUFFER_SIZE + i,
+                                    cellIndex - self.BUFFER_SIZE + j,
+                                ] = self.BUFFER
+
+    def canGoTo(self, position):
+        canGoTo = (
+            self.board[position] == self.OPEN
+            and self.board[position] != self.BUFFER
+            and self.visitedMap[position] != self.VISITED
+        )
+
+        return canGoTo
+
+    def getOpenDirections(self, currentPosition):
+        currentRow = currentPosition[0]
+        currentColumn = currentPosition[1]
+
+        openDirections = []
+        sortedOpenDirections = []
+
+        # todo: discuss with Sami/Milky??
+        # todo: the +/- 1 values should actually be the vision range of the robot.
+        # todo: OR we should decide on the size of a "TILE"
+
+        # decide on adding padding to openings on both sides...
+        # dimension of robot - 30x30
+        # min distance traveled 30cm
+
+        # ?: OR maybe set the next go to point to a place where we think we might find an open space that is facing our preferred direction
+
+        try:
+            if currentRow + 1 >= 0 and self.canGoTo((currentRow + 1, currentColumn)):
+                openDirections.append(self.SOUTH)
+        except IndexError:
+            pass
+
+        try:
+            if currentRow - 1 >= 0 and self.canGoTo((currentRow - 1, currentColumn)):
+                openDirections.append(self.NORTH)
+        except IndexError:
+            pass
+
+        try:
+            if currentColumn + 1 >= 0 and self.canGoTo((currentRow, currentColumn + 1)):
+                openDirections.append(self.EAST)
+        except IndexError:
+            pass
+
+        try:
+            if currentColumn - 1 >= 0 and self.canGoTo((currentRow, currentColumn - 1)):
+                openDirections.append(self.WEST)
+        except IndexError:
+            pass
+
+        for i in openDirections:
+            sortedOpenDirections.append(self.stepPriority[0][i])
+
+        sortedOpenDirections.sort()
+
+        for i in range(len(sortedOpenDirections)):
+            sortedOpenDirections[i] = self.stepPriority[1][sortedOpenDirections[i]]
+
+        return sortedOpenDirections
+
+    def updateVisitedMap(self, currentPosition, direction):
+        self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
+
+        VISITING_RANGE = 4
+        if direction == "NORTH" or direction == "SOUTH":
+            # if facing NORTH or SOUTH, mark adjacent (EAST and WEST) positions inside the VISION_RANGE as VISITED
+
+            continueLeftCheck = True
+            continueRightCheck = True
+            for i in range(VISITING_RANGE + 1):
+
+                # todo: add the position to branching stack on the last loop
+                if continueLeftCheck is False and continueRightCheck is False:
+                    break
+
+                leftSideAdjacentCellColumn = currentPosition[1] - i - 1
+                rightSideAdjacentCellColumn = currentPosition[1] + i + 1
+
+                if leftSideAdjacentCellColumn < 0:
+                    leftSideAdjacentCellColumn = 0
+
+                try:
+                    leftAdjacentPoint = (currentPosition[0], leftSideAdjacentCellColumn)
+                    rightAdjacentPoint = (
+                        currentPosition[0],
+                        rightSideAdjacentCellColumn,
+                    )
+
+                    if continueLeftCheck and self.canGoTo(leftAdjacentPoint):
+                        self.visitedMap[leftAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (leftAdjacentPoint[0], leftAdjacentPoint[1] - 1)
+                        ):
+                            self.branchingStack.append(leftAdjacentPoint)
+
+                    else:
+                        continueLeftCheck = False
+
+                    if continueRightCheck and self.canGoTo(rightAdjacentPoint):
+                        self.visitedMap[rightAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (rightAdjacentPoint[0], rightAdjacentPoint[1] + 1)
+                        ):
+                            self.branchingStack.append(rightAdjacentPoint)
+
+                    else:
+                        continueRightCheck = False
+
+                except IndexError:
+                    break
+
+        elif direction == "EAST" or direction == "WEST":
+            continueTopCheck = True
+            continueBottomCheck = True
+
+            for i in range(VISITING_RANGE + 1):
+                topSideAdjacentCellColumn = currentPosition[0] - i - 1
+                bottomSideAdjacentCellColumn = currentPosition[0] + i + 1
+
+                if topSideAdjacentCellColumn < 0:
+                    topSideAdjacentCellColumn = 0
+
+                if continueTopCheck is False and continueBottomCheck is False:
+                    break
+
+                try:
+                    topAdjacentPoint = (topSideAdjacentCellColumn, currentPosition[1])
+                    bottomAdjacentPoint = (
+                        bottomSideAdjacentCellColumn,
+                        currentPosition[1],
+                    )
+
+                    if continueTopCheck and self.canGoTo((topAdjacentPoint)):
+                        self.visitedMap[topAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (
+                                topAdjacentPoint[0] - 1,
+                                topAdjacentPoint[1],
+                            )
+                        ):
+                            self.branchingStack.append(topAdjacentPoint)
+
+                    else:
+                        continueTopCheck = False
+
+                    if continueBottomCheck and self.canGoTo((bottomAdjacentPoint)):
+                        self.visitedMap[bottomAdjacentPoint] = self.VISITED
+
+                        if i == VISITING_RANGE and self.canGoTo(
+                            (
+                                bottomAdjacentPoint[0] + 1,
+                                bottomAdjacentPoint[1],
+                            )
+                        ):
+                            self.branchingStack.append(bottomAdjacentPoint)
+
+                    else:
+                        continueBottomCheck = False
+
+                except IndexError:
+                    break
+
+    # Tuple with 2 elements
+    # (X, Y) - where X is the row index
+    #       - where Y is the column index
+    def getNextStep(self, currentPosition):
+        self.addBufferToObstacles()
+        openDirections = self.getOpenDirections(currentPosition)
+
+        if len(openDirections) > 1:
+            if len(self.branchingStack) == 0 or (
+                len(self.branchingStack) > 0
+                and self.branchingStack[-1] != (currentPosition)
+            ):
+                self.branchingStack.append(currentPosition)
+
+        directionFacing = ""
+        if len(openDirections) > 0:
+            directionFacing = openDirections[0]
+        self.updateVisitedMap(currentPosition, directionFacing)
+
+        # print("*************************************")
+        # print(openDirections)
+        # print("*************************************")
+        # print(self.visitedMap)
+
+        for direction in openDirections:
+            prevStepPriority = self.stepPriority[0][direction]
+
+            while True:
+                newPoint = Point.addTuples(
+                    currentPosition, Directions.getCoordinate(direction)
+                )
+
+                openDirections = self.getOpenDirections(newPoint)
+                if (
+                    len(openDirections) > 0
+                    and self.stepPriority[0][openDirections[0]] == prevStepPriority
+                ):
+                    self.updateVisitedMap(newPoint, direction)
+                    currentPosition = newPoint
+                else:
+                    return newPoint
+
         else:
-            angle = math.degrees(math.atan(rowDistace / columnDistance))
+            # backtracking
+            # print("got back to branching point")
+            if len(self.branchingStack) > 0:
+                returnPoint = self.branchingStack.pop()
+                # print(returnPoint)
+                return returnPoint
+            else:
+                # print("no more moves")
+                return -50
 
-        # What the sensor can sense
-        # Taking vision_angle and distance into account
-        if distance <= 5.0 and (90 - abs(angle) <= VISION_ANGLE / 2):
-            # TODO: Do rotation
-            # print("Row: ", centerRow - VISION_RANGE + rowIndex)
-            # print("Col: ", centerColumn - VISION_RANGE + columnIndex)
-            rowNow = centerRow - VISION_RANGE + rowIndex
-            columnNow = centerColumn - VISION_RANGE + columnIndex
+        # (x,y)
 
-            rowRotated = (centerColumn - columnNow) * math.sin(BEARING) + (
-                centerRow - rowNow
-            ) * math.cos(BEARING)
-            # region
-            # print(
-            #     "E: ",
-            #     centerColumn - columnNow,
-            #     " > ",
-            #     ((centerColumn - columnNow) * math.cos(BEARING)),
-            # )
-            # print(
-            #     "E: ",
-            #     centerRow - rowNow,
-            #     " > ",
-            #     math.sin(BEARING),
-            #     " > ",
-            #     (centerRow - rowNow) * math.sin(BEARING),
-            # )
-            # endregion
+    # todo
+    # return the farthest point in the needed direction
+    # this point will be in the OPEN spots in the map
+    # - or it can be a VISITED spot if an open slot is not found in the direct vicinity
 
-            columnRotated = (centerColumn - columnNow) * math.cos(BEARING) - (
-                centerRow - rowNow
-            ) * math.sin(BEARING)
 
-            print(
-                "ROW: ",
-                rowNow,
-                " * ",
-                centerRow - rowNow,
-                " > ",
-                rowRotated,
-                " > ",
-                int(round(rowRotated)),
-            )
-            print(
-                "COL: ",
-                columnNow,
-                " * ",
-                centerColumn - columnNow,
-                " > ",
-                columnRotated,
-                " > ",
-                int(round(columnRotated)),
-            )
-            print()
+# Example for Usage
+def startExploration(droneStartingCoordinate):
+    x = droneStartingCoordinate[0]
+    y = droneStartingCoordinate[1]
 
-            print(
-                centerRow + int(round(rowRotated)),
-                centerColumn + int(round(columnRotated)),
-            )
-            areaCopy[
-                centerRow + int(round(rowRotated)),
-                centerColumn + int(round(columnRotated)),
-            ] = 2
+    # todo: drone starting coordinate should be the bounds in the next line
+    robotPositionState = NextDestination(
+        bounds={"northBound": 0, "southBound": 500, "westBound": 0, "eastBound": 500}
+    )
+    dxnPriorities = robotPositionState.generateStepPriority()
 
-            area[
-                centerRow - VISION_RANGE + rowIndex,
-                centerColumn - VISION_RANGE + columnIndex,
-            ] = 2
-print("AreaCopy: ", areaCopy)
+    print("Direction Priorities: ", dxnPriorities)
 
-print("The Field: \n", area)
+    simpleMap = np.zeros((100, 100))
+
+    exploration = Exploration(simpleMap, dxnPriorities)
+
+    nextPoint = (x, y)
+    while nextPoint != -50:
+
+        print("nextPoint: ", nextPoint)
+        nextPoint = exploration.getNextStep(nextPoint)
+
+
+startExploration((0, 0))
