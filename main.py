@@ -15,6 +15,8 @@ class Exploration:
 
     BUFFER_SIZE = 3
 
+    numberOfSteps = 0
+
     # todo: is this not important?
     visitedStack = []
 
@@ -73,13 +75,16 @@ class Exploration:
         self.stepPriority = robotPositionState.generateStepPriority()
 
     def canGoTo(self, position):
-        canGoTo = (
-            self.board[position] == self.OPEN
-            and self.board[position] != self.BUFFER
-            and self.visitedMap[position] != self.VISITED
-        )
+        try:
+            canGoTo = (
+                self.board[position] == self.OPEN
+                and self.board[position] != self.BUFFER
+                and self.visitedMap[position] != self.VISITED
+            )
+            return canGoTo
 
-        return canGoTo
+        except IndexError:
+            return None
 
     def getOpenDirections(self, currentPosition):
         currentRow = currentPosition[0]
@@ -135,8 +140,8 @@ class Exploration:
     def updateVisitedMap(self, currentPosition, direction):
         self.visitedMap[currentPosition[0], currentPosition[1]] = self.VISITED
 
-        VISITING_RANGE = 1
-        # VISITING_RANGE = 4
+        # VISITING_RANGE = 0
+        VISITING_RANGE = 100
         if direction == "NORTH" or direction == "SOUTH":
             # if facing NORTH or SOUTH, mark adjacent (EAST and WEST) positions inside the VISION_RANGE as VISITED
 
@@ -238,14 +243,73 @@ class Exploration:
                 except IndexError:
                     break
 
+    def continueCoverage(self):
+
+        breakMapInto = 10
+
+        rowSize = self.visitedMap.shape[0] / breakMapInto
+        columnSize = self.visitedMap.shape[1] / breakMapInto
+
+        # 200 for e.g.
+        totalNumberOfPositions = rowSize * columnSize
+
+        # 15% of the positions under inspection
+        THRESHOLD = 0.15 * totalNumberOfPositions
+
+        # todo: use step priority to check row or column first?
+
+        for i in range(breakMapInto):
+            for j in range(breakMapInto):
+
+                rowStart = int(i * rowSize)
+                rowEnd = int((i + 1) * rowSize)
+                columnStart = int(j * columnSize)
+                columnEnd = int((j + 1) * columnSize)
+
+                wallPositions = np.where(
+                    self.visitedMap[rowStart:rowEnd, columnStart:columnEnd] == self.WALL
+                )
+                bufferPositions = np.where(
+                    self.visitedMap[rowStart:rowEnd, columnStart:columnEnd]
+                    == self.BUFFER
+                )
+                visitedPositions = np.where(
+                    self.visitedMap[rowStart:rowEnd, columnStart:columnEnd]
+                    == self.VISITED
+                )
+
+                exploredPositions = (
+                    len(wallPositions[0])
+                    + len(bufferPositions[0])
+                    + len(visitedPositions[0])
+                )
+
+                # open and yet unseen Positions
+                unexploredPositions = totalNumberOfPositions - exploredPositions
+
+                if unexploredPositions >= THRESHOLD:
+                    # The area is considered undiscovered
+                    return True
+
+        return False
+
     # Tuple with 2 elements
     # (X, Y) - where X is the row index
     #       - where Y is the column index
     def getNextStep(self, updatedMap, currentPosition):
-        self.board = updatedMap
-        unexploredPositions = np.where(self.visitedMap == self.OPEN)
-        if len(unexploredPositions[0]) == 0 and len(unexploredPositions[0]) == 0:
+        if len(currentPosition) == 0:
             return []
+
+        self.board = updatedMap
+
+        self.numberOfSteps += 1
+
+        # Perform a check every 6 steps
+        if self.numberOfSteps > 15 and self.numberOfSteps % 6 == 0:
+            # stop coverage?
+            if self.continueCoverage() == False:
+                return []
+
         openDirections = self.getOpenDirections(currentPosition)
 
         if len(openDirections) > 1:
@@ -318,33 +382,49 @@ def newExploration():
 
 # Example for Usage
 def startExploration(droneStartingCoordinate):
-    x = droneStartingCoordinate[0]
-    y = droneStartingCoordinate[1]
+    row = droneStartingCoordinate[0]
+    column = droneStartingCoordinate[1]
 
     # todo: drone starting coordinate should be the bounds in the next line
     robotPositionState = NextDestination(
-        bounds={"northBound": 0, "southBound": 20, "westBound": 0, "eastBound": 20}
+        bounds={"northBound": 20, "southBound": 0, "westBound": 20, "eastBound": 0}
     )
     dxnPriorities = robotPositionState.generateStepPriority()
 
     print("Direction Priorities: ", dxnPriorities)
 
-    simpleMap = np.zeros((5, 5))
+    simpleMap = np.zeros((500, 500))
 
-    updatedMap = np.zeros((5, 5))
+    updatedMap = np.zeros((500, 500))
 
     # exploration = Exploration(simpleMap, dxnPriorities)
-    exploration = Exploration(
-        areaMap=simpleMap,
-        bounds={"northBound": 0, "southBound": 20, "westBound": 0, "eastBound": 20},
+    exploration = Exploration()
+    exploration.initConfig(
+        mapShape=simpleMap.shape,
+        bounds={"northBound": 20, "southBound": 29, "westBound": 20, "eastBound": 29},
     )
 
-    nextPoint = (x, y)
-    while nextPoint != -50:
+    # x = np.arange(0, 500)
+    # y = np.arange(0, 500)
+
+    # plt.figure(figsize=(8, 8))
+    # plt.pcolormesh(x, y, exploration.visitedMap)
+    # plt.colorbar()
+    # plt.show()
+    # plt.ion()
+
+    nextPoint = (row, column)
+    while nextPoint != []:
 
         # print("nextPoint: ", nextPoint)
         nextPoint = exploration.getNextStep(updatedMap, nextPoint)
+
+        # plt.pause(3)
+        # plt.draw()
+
         # nextPoint = exploration.getNextStep(nextPoint)
 
+    print("DONE: ", exploration.numberOfSteps, " steps")
 
-startExploration((1, 4))
+
+startExploration((20, 20))
